@@ -31,6 +31,30 @@ func createRandomAccount(t *testing.T) Account {
 	return account
 }
 
+func createRandomEntrie(t *testing.T) Entry {
+
+	account1 := createRandomAccount(t)
+	account2, err := testQueries.GetAccount(context.Background(), account1.ID)
+
+	arg := CreateEntrieParams{
+		AccountID: account2.ID,
+		Amount:    util.RandomMoney(),
+	}
+
+	entrie, err := testQueries.CreateEntrie(context.Background(), arg)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, entrie)
+
+	require.Equal(t, arg.AccountID, entrie.AccountID)
+	require.Equal(t, arg.Amount, entrie.Amount)
+
+	require.NotZero(t, entrie.AccountID)
+	require.NotZero(t, entrie.Amount)
+
+	return entrie
+}
+
 func TestCreateAccount(t *testing.T) {
 	createRandomAccount(t)
 }
@@ -97,4 +121,63 @@ func TestListAccounts(t *testing.T) {
 	for _, account := range accounts {
 		require.NotEmpty(t, account)
 	}
+}
+
+// Test Entries
+
+func TestGetEntrie(t *testing.T) {
+	entrie1 := createRandomEntrie(t)
+
+	entrie2, err := testQueries.GetEntrie(context.Background(), entrie1.ID)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, entrie2)
+}
+
+func TestListEntries(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		createRandomEntrie(t)
+	}
+
+	arg := ListEntriesParams{
+		Limit:  5,
+		Offset: 5,
+	}
+
+	entries, err := testQueries.ListEntries(context.Background(), arg)
+
+	require.NoError(t, err)
+	require.Equal(t, arg.Limit, int32(len(entries)))
+
+	for _, entrie := range entries {
+		require.NotEmpty(t, entrie)
+	}
+}
+
+func TestUpdateEntrie(t *testing.T) {
+	entrie1 := createRandomEntrie(t)
+
+	arg := UpdateEntrieParams{
+		ID:     entrie1.ID,
+		Amount: util.RandomMoney(),
+	}
+
+	entrie2, err := testQueries.UpdateEntrie(context.Background(), arg)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, entrie2)
+
+	require.Equal(t, entrie1.ID, entrie2.ID)
+	require.Equal(t, arg.Amount, entrie2.Amount)
+}
+
+func TestDeleteEntrie(t *testing.T) {
+	entrie1 := createRandomEntrie(t)
+	err := testQueries.DeleteAccount(context.Background(), entrie1.ID)
+	require.NoError(t, err)
+
+	entrie2, err := testQueries.GetAccount(context.Background(), entrie1.ID)
+	require.Error(t, err)
+	require.EqualError(t, err, sql.ErrNoRows.Error())
+	require.Empty(t, entrie2)
 }

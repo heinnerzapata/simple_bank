@@ -38,12 +38,47 @@ func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (A
 	return i, err
 }
 
+const createEntrie = `-- name: CreateEntrie :one
+INSERT INTO entries (
+  account_id,
+  amount
+) VALUES (
+  $1, $2
+) RETURNING id, account_id, amount, created_at
+`
+
+type CreateEntrieParams struct {
+	AccountID int64
+	Amount    int64
+}
+
+func (q *Queries) CreateEntrie(ctx context.Context, arg CreateEntrieParams) (Entry, error) {
+	row := q.db.QueryRowContext(ctx, createEntrie, arg.AccountID, arg.Amount)
+	var i Entry
+	err := row.Scan(
+		&i.ID,
+		&i.AccountID,
+		&i.Amount,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const deleteAccount = `-- name: DeleteAccount :exec
 DELETE FROM accounts WHERE id = $1
 `
 
 func (q *Queries) DeleteAccount(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteAccount, id)
+	return err
+}
+
+const deleteEntrie = `-- name: DeleteEntrie :exec
+DELETE FROM entries WHERE id = $1
+`
+
+func (q *Queries) DeleteEntrie(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteEntrie, id)
 	return err
 }
 
@@ -60,6 +95,23 @@ func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
 		&i.Owner,
 		&i.Balance,
 		&i.Currency,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEntrie = `-- name: GetEntrie :one
+SELECT id, account_id, amount, created_at FROM entries
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetEntrie(ctx context.Context, id int64) (Entry, error) {
+	row := q.db.QueryRowContext(ctx, getEntrie, id)
+	var i Entry
+	err := row.Scan(
+		&i.ID,
+		&i.AccountID,
+		&i.Amount,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -106,6 +158,46 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]A
 	return items, nil
 }
 
+const listEntries = `-- name: ListEntries :many
+SELECT id, account_id, amount, created_at FROM entries
+ORDER BY id
+LIMIT $1
+OFFSET $2
+`
+
+type ListEntriesParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) ListEntries(ctx context.Context, arg ListEntriesParams) ([]Entry, error) {
+	rows, err := q.db.QueryContext(ctx, listEntries, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Entry
+	for rows.Next() {
+		var i Entry
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Amount,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateAccount = `-- name: UpdateAccount :one
 UPDATE accounts
 SET balance = $2
@@ -126,6 +218,30 @@ func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (A
 		&i.Owner,
 		&i.Balance,
 		&i.Currency,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateEntrie = `-- name: UpdateEntrie :one
+UPDATE entries
+SET amount = $2
+WHERE id = $1
+RETURNING id, account_id, amount, created_at
+`
+
+type UpdateEntrieParams struct {
+	ID     int64
+	Amount int64
+}
+
+func (q *Queries) UpdateEntrie(ctx context.Context, arg UpdateEntrieParams) (Entry, error) {
+	row := q.db.QueryRowContext(ctx, updateEntrie, arg.ID, arg.Amount)
+	var i Entry
+	err := row.Scan(
+		&i.ID,
+		&i.AccountID,
+		&i.Amount,
 		&i.CreatedAt,
 	)
 	return i, err

@@ -40,6 +40,11 @@ func RandomMoney() int64 {
 	return RandomInt(0, 1000)
 }
 
+// RandomAccountId generates a random account id
+func RandomAccountId() int64 {
+	return RandomInt(0, 1000)
+}
+
 func RanddomCurrency() string {
 	currencies := []string{"USD", "COP", "BTC"}
 	k := len(currencies)
