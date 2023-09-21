@@ -1,4 +1,4 @@
-package simplebank
+package db
 
 import (
 	"context"
@@ -60,6 +60,8 @@ type TransferTxResult struct {
 	ToEntrie    Entry    `kson:"to_entrie"`
 }
 
+var txKey = struct{}{}
+
 // TransferTx performs a money transfer from one account to another
 // it creates a new transfer record, add a ne waccount entries and update account balance within a single db transaction
 
@@ -100,7 +102,30 @@ func (store *Store) TransferTX(ctx context.Context, arg TransferCreateParams) (T
 			return err
 		}
 
-		// TODO account update balance
+		account1, err := q.GetAccountForUpdate(ctx, arg.FromAccountID)
+		if err != nil {
+			return err
+		}
+
+		result.FromAccount, err = q.UpdateAccount(ctx, UpdateAccountParams{
+			ID:      arg.FromAccountID,
+			Balance: account1.Balance - arg.Amount,
+		})
+
+		if err != nil {
+			return err
+		}
+
+		account2, err := q.GetAccountForUpdate(ctx, arg.ToAccountID)
+		if err != nil {
+			return err
+		}
+
+		result.ToAccount, err = q.UpdateAccount(ctx, UpdateAccountParams{
+			ID:      arg.ToAccountID,
+			Balance: account2.Balance + arg.Amount,
+		})
+
 		return nil
 	})
 

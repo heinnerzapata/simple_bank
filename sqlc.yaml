@@ -5,7 +5,7 @@ sql:
     engine: postgresql
     gen:
       go:
-        package: "simplebank"
+        package: "db"
         out: "./db/sqlc"
 plugins:
   - name: test
