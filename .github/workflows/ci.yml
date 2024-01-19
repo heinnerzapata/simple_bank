@@ -13,23 +13,28 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    # Service containers to run with `container-job`
     services:
-      # Label used to access the service container
       postgres:
-        # Docker Hub image
         image: postgres:12
-        # Provide the password for postgres
         env:
           POSTGRES_USER: root
           POSTGRES_PASSWORD: secret
           POSTGRES_DB: simple_bank
-        # Set health checks to wait until postgres has started
+          # TODO: unable to turn off fsync easily, see
+          # https://github.com/orgs/community/discussions/26688#discussioncomment-3252882
+          # and
+          # https://github.com/actions/runner/discussions/1872
+        ports:
+          - 5433:5432
+        # Use a temporary directory for data by passing --mount to the `docker`
+        # command; could also attempt to use the volumes: github serrvice
+        # option.
         options: >-
+          --mount type=tmpfs,destination=/var/lib/postgresql/data
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5ﬂ
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v3
