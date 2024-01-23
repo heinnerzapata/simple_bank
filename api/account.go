@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	db "simplebank/db/sqlc"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,6 +30,31 @@ func (server *Server) createAccount(ctx *gin.Context) {
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	}
+
+	ctx.JSON(http.StatusOK, &account)
+}
+
+type getAccountRequest struct {
+	ID int64 `uri:"name" binding:"required"`
+}
+
+func (server *Server) getAccount(ctx *gin.Context) {
+	idParam := ctx.Param("id")
+
+	idParamInt, err := strconv.ParseInt(idParam, 10, 64)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+	}
+
+	req := &getAccountRequest{idParamInt}
+
+	account, err := server.store.GetAccount(ctx, req.ID)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
 	}
 
 	ctx.JSON(http.StatusOK, &account)
